@@ -31,6 +31,6 @@ describe('indirizzo del sito', () => {
   it('su Vercel usa il dominio di produzione, salvo indicazione diversa', () => {
     expect(resolveSiteUrl({ VERCEL_PROJECT_PRODUCTION_URL: 'sestetto.vercel.app' })).toBe('https://sestetto.vercel.app');
     expect(resolveSiteUrl({ VERCEL_PROJECT_PRODUCTION_URL: 'sestetto.it', VITE_SITE_URL: 'https://www.sestetto.it/' })).toBe('https://www.sestetto.it');
-    expect(resolveSiteUrl({})).toBe('https://sestetto.vercel.app');
+    expect(resolveSiteUrl({})).toBe('https://sestetto.app');
   });
 });

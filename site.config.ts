@@ -13,7 +13,7 @@ export const SITE = {
     'Le sei rotazioni della pallavolo nel 5-1: ricezione a tre, attacco, battuta, difesa e free ball. Inserisci i nomi della tua squadra e sposta i giocatori.',
   tagline: 'Rotazioni e posizioni della pallavolo',
   /** Usato solo se non si è su Vercel e VITE_SITE_URL non è impostata. */
-  fallbackUrl: 'https://sestetto.vercel.app',
+  fallbackUrl: 'https://sestetto.app',
   lang: 'it',
   locale: 'it_IT',
   themeColor: '#0F1B31',
