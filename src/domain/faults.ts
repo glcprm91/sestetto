@@ -9,7 +9,7 @@ export interface PairCheck {
 }
 
 /** Coppie di zone vicine sulla stessa linea: la prima sta a sinistra della seconda. */
-const SIDE_PAIRS: [Zone, Zone][] = [
+export const SIDE_PAIRS: [Zone, Zone][] = [
   [4, 3],
   [3, 2],
   [5, 6],
@@ -17,13 +17,13 @@ const SIDE_PAIRS: [Zone, Zone][] = [
 ];
 
 /** Coppie avanti/dietro: la prima sta più vicina alla rete della seconda. */
-const DEPTH_PAIRS: [Zone, Zone][] = [
+export const DEPTH_PAIRS: [Zone, Zone][] = [
   [4, 5],
   [3, 6],
   [2, 1],
 ];
 
-const MARGIN = 0.05;
+export const MARGIN = 0.05;
 
 /**
  * Controllo dei falli di posizione al momento della battuta (regola 7.4):

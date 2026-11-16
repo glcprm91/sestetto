@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { sceneCaption } from './captions';
-import { DefenseOptions, PhaseBar, PlayButton, RotationBar, Segmented, SituationSwitch, Switch } from './components/Controls';
-import { Court } from './components/Court';
+import { DefenseOptions, PhaseBar, PlayButton, RadiusStepper, RotationBar, Segmented, SituationSwitch, Switch } from './components/Controls';
+import { Court, type CourtSelection } from './components/Court';
 import { Roster } from './components/Roster';
 import { noteKey, sceneKey } from './domain/formations';
 import { sceneHint } from './domain/hints';
 import { nextRotation, prevRotation, ROTATION_ORDER } from './domain/lineup';
+import { clampToRange, moveRange, type MoveRange } from './domain/range';
 import { buildScene } from './domain/scene';
 import { displayName } from './domain/team';
 import { PHASES, type AttackFrom, type PhaseId, type PlayerId, type Point, type Rotation, type SceneContext, type Situation } from './domain/types';
@@ -15,6 +16,21 @@ import { activeTeam, loadState, reducer, saveState } from './state/store';
 
 const SITE_NAME = 'Sestetto';
 
+const FREE: MoveRange = { kind: 'libero' };
+
+/** Cosa può fare il giocatore selezionato, detto a parole. */
+function rangeText(range: MoveRange, limited: boolean): string {
+  if (range.kind === 'area') {
+    return range.reason === 'servizio'
+      ? 'è al servizio: può battere da qualsiasi punto dietro la linea di fondo.'
+      : 'può stare in tutta l’area gialla senza fallo di posizione. I limiti sono i compagni vicini: se sposti loro, l’area cambia.';
+  }
+  if (range.kind === 'cerchio') return 'si sposta dentro il cerchio giallo, attorno al punto in cui lo mette lo schema.';
+  return limited
+    ? 'non ha un’area regolare, perché i compagni vicini sono già in fallo tra loro: sistemali e i limiti tornano.'
+    : 'si sposta liberamente: i limiti sono disattivati.';
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const [rotation, setRotation] = useState<Rotation>(1);
@@ -22,7 +38,7 @@ export default function App() {
   const [phase, setPhase] = useState<PhaseId>('ricezione');
   const [attackFrom, setAttackFrom] = useState<AttackFrom>('attesa');
   const [showAll, setShowAll] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [selected, setSelected] = useState<PlayerId | null>(null);
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState('');
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -33,7 +49,21 @@ export default function App() {
   const ctx: SceneContext = useMemo(() => ({ rotation, situation, phase, attackFrom }), [rotation, situation, phase, attackFrom]);
   const scene = useMemo(() => buildScene(team, ctx), [team, ctx]);
   const key = sceneKey(ctx, team.defenseSystem);
-  const courtSettings = useMemo(() => ({ ...settings, showFaults: settings.showFaults || editing }), [settings, editing]);
+
+  /** Fin dove può andare un giocatore in questa scena. */
+  const rangeOf = useCallback(
+    (id: PlayerId): MoveRange => (settings.limitMoves ? moveRange(scene, id, settings.moveRadius) : FREE),
+    [scene, settings.limitMoves, settings.moveRadius],
+  );
+
+  // Chi esce dal campo (per esempio il centrale sostituito dal libero) non resta selezionato.
+  const selectedOnCourt = selected && scene.positions[selected] ? selected : null;
+  const range = selectedOnCourt ? rangeOf(selectedOnCourt) : null;
+
+  const courtSettings = useMemo(
+    () => ({ ...settings, showFaults: settings.showFaults || (selectedOnCourt !== null && !settings.limitMoves) }),
+    [settings, selectedOnCourt],
+  );
 
   useEffect(() => saveState(state), [state]);
 
@@ -52,7 +82,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Scorrimento automatico: un momento dopo l'altro fino alla difesa.
+  // Scorrimento automatico: un momento dopo l'altro fino al contrattacco.
   useEffect(() => {
     if (!playing) return;
     const phases = PHASES[situation];
@@ -63,7 +93,7 @@ export default function App() {
     }
     const timer = setTimeout(() => {
       setPhase(phases[index + 1]);
-      setAttackFrom('attesa');
+      if (phases[index + 1] !== 'contrattacco') setAttackFrom('attesa');
     }, 1600);
     return () => clearTimeout(timer);
   }, [playing, phase, situation]);
@@ -71,14 +101,21 @@ export default function App() {
   const selectPhase = (next: PhaseId) => {
     setPlaying(false);
     setPhase(next);
-    setAttackFrom('attesa');
+    // Tra difesa e contrattacco resta la scelta fatta sulla palla avversaria: il contrattacco parte da lì.
+    if (next !== 'difesa' && next !== 'contrattacco') setAttackFrom('attesa');
   };
 
   const selectSituation = (next: Situation) => {
     setPlaying(false);
+    setSelected(null);
     setSituation(next);
     setAttackFrom('attesa');
     if (!PHASES[next].includes(phase)) setPhase(next);
+  };
+
+  const selectRotation = (next: Rotation) => {
+    setSelected(null);
+    setRotation(next);
   };
 
   const togglePlay = () => {
@@ -87,21 +124,30 @@ export default function App() {
     if (phases.indexOf(phase) >= phases.length - 1) setPhase(phases[0]);
     setAttackFrom('attesa');
     setShowAll(false);
+    setSelected(null);
     setPlaying(true);
   };
 
-  /** Cambia cosa mostra il campo e lo riporta in vista: su telefono i comandi stanno più in basso. */
-  const showOnStage = (...changes: (() => void)[]) => {
+  const toggleOverview = () => {
     setPlaying(false);
-    for (const change of changes) change();
+    setSelected(null);
+    setShowAll(!showAll);
+    // Su telefono i comandi stanno sotto il campo: lo riporto in vista.
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     stageRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
   };
 
+  const selectPlayer = useCallback((id: PlayerId | null) => {
+    if (id) setPlaying(false);
+    setSelected(id);
+  }, []);
+
   const movePlayer = useCallback(
-    (id: PlayerId, point: Point) => dispatch({ type: 'custom/move', key, id, point }),
-    [key],
+    (id: PlayerId, point: Point) => dispatch({ type: 'custom/move', key, id, point: clampToRange(point, rangeOf(id)) }),
+    [key, rangeOf],
   );
+
+  const selection: CourtSelection = { selected: selectedOnCourt, range, onSelect: selectPlayer, onMove: movePlayer };
 
   const copyLink = async () => {
     try {
@@ -116,7 +162,8 @@ export default function App() {
     if (!svgRef.current) return;
     try {
       const slug = (team.name || 'squadra').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'squadra';
-      await downloadPng(svgRef.current, `${slug}-p${rotation}-${phase}.png`);
+      const moment = phase === 'difesa' && attackFrom !== 'attesa' ? `difesa-${attackFrom}` : phase;
+      await downloadPng(svgRef.current, `${slug}-p${rotation}-${moment}.png`);
     } catch {
       setToast('Non riesco a creare l’immagine');
     }
@@ -129,6 +176,7 @@ export default function App() {
       : `${displayName(team, a)} deve stare più vicino alla rete di ${displayName(team, b)}`;
   const note = team.notes[noteKey(situation, rotation)] ?? '';
   const customCount = Object.keys(team.custom).length;
+  const selectedMoved = selectedOnCourt !== null && Boolean(team.custom[key]?.[selectedOnCourt]);
 
   return (
     <div className="app">
@@ -136,7 +184,13 @@ export default function App() {
         <h1>{SITE_NAME}</h1>
         <label className="team-picker">
           <span className="visually-hidden">Squadra</span>
-          <select value={team.id} onChange={(event) => dispatch({ type: 'team/select', id: event.target.value })}>
+          <select
+            value={team.id}
+            onChange={(event) => {
+              setSelected(null);
+              dispatch({ type: 'team/select', id: event.target.value });
+            }}
+          >
             {state.teams.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name || 'Squadra senza nome'}
@@ -147,7 +201,7 @@ export default function App() {
       </header>
 
       <main className="board">
-        <section className={`stage${showAll || editing ? ' stage--tall' : ''}`} aria-label="Campo" ref={stageRef}>
+        <section className={`stage${showAll ? ' stage--tall' : ''}`} aria-label="Campo" ref={stageRef}>
           {showAll ? (
             <div className="overview">
               {ROTATION_ORDER.map((value) => {
@@ -170,29 +224,7 @@ export default function App() {
             </div>
           ) : (
             <div className="court-wrap">
-              <Court
-                team={team}
-                scene={scene}
-                settings={courtSettings}
-                caption={sceneCaption(ctx)}
-                editable={editing}
-                onMove={movePlayer}
-                svgRef={svgRef}
-              />
-            </div>
-          )}
-
-          {!showAll && editing && (
-            <div className="edit-bar">
-              <p>Trascina i giocatori dove li vuoi. Vale per questa squadra, in questa rotazione e in questo momento.</p>
-              <div className="row">
-                <button type="button" className="btn" disabled={!scene.customized} onClick={() => dispatch({ type: 'custom/reset', key })}>
-                  Ripristina lo schema
-                </button>
-                <button type="button" className="btn btn--primary" onClick={() => setEditing(false)}>
-                  Fatto
-                </button>
-              </div>
+              <Court team={team} scene={scene} settings={courtSettings} caption={sceneCaption(ctx)} selection={selection} svgRef={svgRef} />
             </div>
           )}
 
@@ -210,6 +242,35 @@ export default function App() {
             </div>
           )}
         </section>
+
+        {/* Su telefono sta sotto il campo, su schermo largo in cima alla colonna dei comandi: il campo non si sposta mai. */}
+        <div className="selection-slot">
+          {!showAll && !selectedOnCourt && <p className="stage-note">Seleziona un giocatore sul campo per spostarlo.</p>}
+
+          {!showAll && selectedOnCourt && range && (
+            <div className="edit-bar" role="group" aria-label="Giocatore selezionato">
+              <p>
+                <strong>{displayName(team, selectedOnCourt)}</strong> {rangeText(range, settings.limitMoves)}
+              </p>
+              {range.kind === 'cerchio' && (
+                <RadiusStepper value={settings.moveRadius} onChange={(moveRadius) => dispatch({ type: 'settings/patch', patch: { moveRadius } })} />
+              )}
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!selectedMoved}
+                  onClick={() => dispatch({ type: 'custom/resetPlayer', key, id: selectedOnCourt })}
+                >
+                  Riporta allo schema
+                </button>
+                <button type="button" className="btn btn--primary" onClick={() => setSelected(null)}>
+                  Fatto
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="panel">
           <section className="section section--first" aria-label="Azione e rotazione">
@@ -231,19 +292,16 @@ export default function App() {
             )}
             <RotationBar
               rotation={rotation}
-              onSelect={setRotation}
-              onNext={() => setRotation(nextRotation(rotation))}
-              onPrev={() => setRotation(prevRotation(rotation))}
+              onSelect={selectRotation}
+              onNext={() => selectRotation(nextRotation(rotation))}
+              onPrev={() => selectRotation(prevRotation(rotation))}
             />
           </section>
 
           <section className="section" aria-label="Spiegazione e strumenti">
             <p className="hint">{sceneHint(team, ctx)}</p>
             <div className="row">
-              <button type="button" className="btn" aria-pressed={editing} onClick={() => showOnStage(() => setEditing(!editing), () => setShowAll(false))}>
-                Sposta i giocatori
-              </button>
-              <button type="button" className="btn" aria-pressed={showAll} onClick={() => showOnStage(() => setShowAll(!showAll), () => setEditing(false))}>
+              <button type="button" className="btn" aria-pressed={showAll} onClick={toggleOverview}>
                 Tutte e sei le rotazioni
               </button>
             </div>
@@ -286,6 +344,11 @@ export default function App() {
             />
             <Switch label="Frecce degli spostamenti" checked={settings.showArrows} onChange={(showArrows) => dispatch({ type: 'settings/patch', patch: { showArrows } })} />
             <Switch label="Falli di posizione" checked={settings.showFaults} onChange={(showFaults) => dispatch({ type: 'settings/patch', patch: { showFaults } })} />
+            <Switch
+              label="Sposta i giocatori solo entro il loro range"
+              checked={settings.limitMoves}
+              onChange={(limitMoves) => dispatch({ type: 'settings/patch', patch: { limitMoves } })}
+            />
 
             <div className="row">
               <button type="button" className="btn" disabled={showAll} onClick={savePng}>
@@ -298,6 +361,11 @@ export default function App() {
                 Copia link della squadra
               </button>
             </div>
+            {scene.customized && (
+              <button type="button" className="btn btn--quiet" onClick={() => dispatch({ type: 'custom/reset', key })}>
+                Riporta questo momento allo schema
+              </button>
+            )}
             {customCount > 0 && (
               <button type="button" className="btn btn--quiet" onClick={() => dispatch({ type: 'custom/resetAll' })}>
                 Ripristina tutte le posizioni spostate ({customCount})

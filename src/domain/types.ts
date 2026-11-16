@@ -19,8 +19,9 @@ export interface Point {
 }
 
 export type Situation = 'ricezione' | 'battuta';
-export type PhaseId = 'base' | 'ricezione' | 'attacco' | 'battuta' | 'difesa';
-export type AttackFrom = 'attesa' | 'da4' | 'da3' | 'da2';
+export type PhaseId = 'base' | 'ricezione' | 'attacco' | 'battuta' | 'difesa' | 'contrattacco';
+/** Cosa fanno gli avversari mentre difendiamo: niente ancora, un attacco, oppure una palla facile. */
+export type AttackFrom = 'attesa' | 'da4' | 'da3' | 'da2' | 'freeball';
 export type DefenseSystem = 'arretrato' | 'avanzato';
 
 export type Gender = 'M' | 'F';
@@ -67,8 +68,8 @@ export const ROLE_META: Record<PlayerId, { code: string; label: string; family: 
 export const ROSTER_ORDER: PlayerId[] = ['P', 'S1', 'C1', 'O', 'S2', 'C2', 'L'];
 
 export const PHASES: Record<Situation, PhaseId[]> = {
-  ricezione: ['base', 'ricezione', 'attacco', 'difesa'],
-  battuta: ['base', 'battuta', 'difesa'],
+  ricezione: ['base', 'ricezione', 'attacco', 'difesa', 'contrattacco'],
+  battuta: ['base', 'battuta', 'difesa', 'contrattacco'],
 };
 
 export const PHASE_LABEL: Record<PhaseId, string> = {
@@ -77,6 +78,7 @@ export const PHASE_LABEL: Record<PhaseId, string> = {
   attacco: 'Attacco',
   battuta: 'Battuta',
   difesa: 'Difesa',
+  contrattacco: 'Contrattacco',
 };
 
 export const SITUATION_LABEL: Record<Situation, string> = {
@@ -89,4 +91,5 @@ export const ATTACK_LABEL: Record<AttackFrom, string> = {
   da4: 'Posto 4',
   da3: 'Centro',
   da2: 'Posto 2',
+  freeball: 'Free ball',
 };

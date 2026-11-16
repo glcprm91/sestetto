@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ROTATION_ORDER } from '../domain/lineup';
+import { RADIUS_LIMITS } from '../domain/range';
 import {
   ATTACK_LABEL,
   PHASE_LABEL,
@@ -18,14 +19,16 @@ interface SegmentedProps<T extends string> {
   options: { value: T; label: ReactNode }[];
   onChange: (value: T) => void;
   hideLabel?: boolean;
+  /** Con molte scelte: larghezza secondo il testo, invece che tutte uguali. */
+  fit?: boolean;
 }
 
 /** Scelta tra poche alternative, tutte visibili. */
-export function Segmented<T extends string>({ label, value, options, onChange, hideLabel }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ label, value, options, onChange, hideLabel, fit }: SegmentedProps<T>) {
   return (
     <div className="field">
       {!hideLabel && <span className="field__label">{label}</span>}
-      <div className="segmented" role="group" aria-label={label}>
+      <div className={`segmented${fit ? ' segmented--fit' : ''}`} role="group" aria-label={label}>
         {options.map((option) => (
           <button
             key={option.value}
@@ -117,7 +120,7 @@ export function PhaseBar({ situation, phase, onSelect }: PhaseBarProps) {
 }
 
 /** In ordine di campo: il posto 2 avversario attacca sulla nostra sinistra, il 4 sulla destra. */
-const ATTACKS: AttackFrom[] = ['attesa', 'da2', 'da3', 'da4'];
+const ATTACKS: AttackFrom[] = ['attesa', 'da2', 'da3', 'da4', 'freeball'];
 
 interface DefenseOptionsProps {
   attackFrom: AttackFrom;
@@ -130,20 +133,44 @@ export function DefenseOptions({ attackFrom, system, onAttack, onSystem }: Defen
   return (
     <div className="defense">
       <Segmented
-        label="Attacco avversario"
+        label="Palla avversaria"
+        fit
         value={attackFrom}
         onChange={onAttack}
         options={ATTACKS.map((value) => ({ value, label: ATTACK_LABEL[value] }))}
       />
-      <Segmented
-        label="Posto 6"
-        value={system}
-        onChange={onSystem}
-        options={[
-          { value: 'arretrato', label: 'Arretrato' },
-          { value: 'avanzato', label: 'Avanzato' },
-        ]}
-      />
+      {attackFrom !== 'freeball' && (
+        <Segmented
+          label="Posto 6"
+          value={system}
+          onChange={onSystem}
+          options={[
+            { value: 'arretrato', label: 'Arretrato' },
+            { value: 'avanzato', label: 'Avanzato' },
+          ]}
+        />
+      )}
+    </div>
+  );
+}
+
+interface RadiusStepperProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+/** Raggio di spostamento a palla in gioco: più tempo c'è, più lontano si arriva. */
+export function RadiusStepper({ value, onChange }: RadiusStepperProps) {
+  return (
+    <div className="stepper" role="group" aria-label="Raggio di spostamento">
+      <span className="field__label">Raggio di spostamento</span>
+      <button type="button" className="btn btn--icon" aria-label="Riduci il raggio" disabled={value <= RADIUS_LIMITS.min} onClick={() => onChange(value - RADIUS_LIMITS.step)}>
+        −
+      </button>
+      <output aria-live="polite">{String(value).replace('.', ',')} m</output>
+      <button type="button" className="btn btn--icon" aria-label="Aumenta il raggio" disabled={value >= RADIUS_LIMITS.max} onClick={() => onChange(value + RADIUS_LIMITS.step)}>
+        +
+      </button>
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import { useId, useRef, useState, type KeyboardEvent, type PointerEvent, type Ref } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent, type Ref } from 'react';
 import { ATTACK_ORIGIN } from '../domain/formations';
+import type { MoveRange } from '../domain/range';
 import type { Scene } from '../domain/scene';
-import { clampPoint, displayName } from '../domain/team';
+import { clampPoint, displayName, FIELD_LIMITS } from '../domain/team';
 import { ROLE_META, type PlayerId, type Point, type Team, type Zone } from '../domain/types';
 import type { Settings } from '../state/store';
 import { COURT_COLORS, FONT_STACK, GENDER_COLORS, ROLE_COLORS, SETTER_RING, type BadgeStyle } from '../theme';
@@ -26,9 +27,17 @@ interface CourtProps {
   settings: Settings;
   /** Riga di testo in basso a sinistra: dice cosa si sta guardando. */
   caption: string;
-  editable?: boolean;
-  onMove?: (id: PlayerId, point: Point) => void;
+  /** Se presente, i giocatori si possono selezionare e spostare. */
+  selection?: CourtSelection;
   svgRef?: Ref<SVGSVGElement>;
+}
+
+export interface CourtSelection {
+  selected: PlayerId | null;
+  /** Fin dove può andare il giocatore selezionato. */
+  range: MoveRange | null;
+  onSelect: (id: PlayerId | null) => void;
+  onMove: (id: PlayerId, point: Point) => void;
 }
 
 const clip = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
@@ -88,14 +97,34 @@ function Ball({ x, y }: Point) {
   );
 }
 
-export function Court({ team, scene, settings, caption, editable = false, onMove, svgRef }: CourtProps) {
+export function Court({ team, scene, settings, caption, selection, svgRef }: CourtProps) {
   const markerId = useId().replace(/[^a-zA-Z0-9]/g, '');
   const localRef = useRef<SVGSVGElement | null>(null);
   const drag = useRef<{ id: PlayerId; dx: number; dy: number } | null>(null);
   const [dragging, setDragging] = useState<PlayerId | null>(null);
+  const lastDragEnd = useRef(0);
 
   const { positions, previous, court, checks, ctx } = scene;
   const players = (Object.keys(positions) as PlayerId[]).sort();
+  const selected = selection?.selected ?? null;
+  const range = selected && positions[selected] ? (selection?.range ?? null) : null;
+
+  // Col dito, trascinare il giocatore selezionato non deve far scorrere la pagina. Sugli elementi
+  // interni di un SVG `touch-action` non basta (il browser annulla il gesto), quindi si blocca qui.
+  const interactive = Boolean(selection);
+  useEffect(() => {
+    const svg = localRef.current;
+    if (!svg || !interactive) return;
+    const keepGesture = (event: TouchEvent) => {
+      if ((event.target as Element | null)?.closest?.('.player.is-selected')) event.preventDefault();
+    };
+    svg.addEventListener('touchstart', keepGesture, { passive: false });
+    svg.addEventListener('touchmove', keepGesture, { passive: false });
+    return () => {
+      svg.removeEventListener('touchstart', keepGesture);
+      svg.removeEventListener('touchmove', keepGesture);
+    };
+  }, [interactive]);
 
   const setRefs = (node: SVGSVGElement | null) => {
     localRef.current = node;
@@ -115,7 +144,10 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
   };
 
   const startDrag = (id: PlayerId) => (event: PointerEvent<SVGGElement>) => {
-    if (!editable) return;
+    if (!selection) return;
+    // Col dito il primo tocco seleziona soltanto, così scorrere la pagina non sposta nessuno.
+    if (selected !== id && event.pointerType !== 'mouse') return;
+    if (selected !== id) selection.onSelect(id);
     const at = toMetres(event);
     const current = positions[id];
     if (!at || !current) return;
@@ -128,16 +160,32 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
     const active = drag.current;
     if (!active) return;
     const at = toMetres(event);
-    if (at) onMove?.(active.id, clampPoint({ x: at.x + active.dx, y: at.y + active.dy }));
+    if (at) selection?.onMove(active.id, clampPoint({ x: at.x + active.dx, y: at.y + active.dy }));
   };
 
   const endDrag = () => {
+    if (drag.current) lastDragEnd.current = performance.now();
     drag.current = null;
     setDragging(null);
   };
 
-  const nudge = (id: PlayerId) => (event: KeyboardEvent<SVGGElement>) => {
-    if (!editable) return;
+  /** Un clic sul campo vuoto toglie la selezione; quello che chiude un trascinamento no. */
+  const clearSelection = () => {
+    if (performance.now() - lastDragEnd.current > 250) selection?.onSelect(null);
+  };
+
+  const onKey = (id: PlayerId) => (event: KeyboardEvent<SVGGElement>) => {
+    if (!selection) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selection.onSelect(selected === id ? null : id);
+      return;
+    }
+    if (event.key === 'Escape') {
+      selection.onSelect(null);
+      return;
+    }
+    if (selected !== id) return;
     const step = event.shiftKey ? 0.5 : 0.1;
     const delta: Record<string, Point> = {
       ArrowLeft: { x: -step, y: 0 },
@@ -149,7 +197,7 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
     const current = positions[id];
     if (!move || !current) return;
     event.preventDefault();
-    onMove?.(id, clampPoint({ x: current.x + move.x, y: current.y + move.y }));
+    selection.onMove(id, clampPoint({ x: current.x + move.x, y: current.y + move.y }));
   };
 
   const labels = spreadLabels(
@@ -185,11 +233,12 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
   return (
     <svg
       ref={setRefs}
-      className={`court${editable ? ' is-editable' : ''}`}
+      className={`court${selection ? ' is-interactive' : ''}`}
       viewBox={`${VIEWBOX.x} ${VIEWBOX.y} ${VIEWBOX.w} ${VIEWBOX.h}`}
-      role="img"
+      role={selection ? 'group' : 'img'}
       aria-label={`${caption}. ${describe}.`}
       fontFamily={FONT_STACK}
+      onClick={clearSelection}
     >
       <defs>
         <marker id={`a${markerId}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
@@ -201,6 +250,14 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
         <pattern id={`n${markerId}`} width="16" height="30" patternUnits="userSpaceOnUse">
           <path d="M8 0 V30 M0 15 H16" stroke={COURT_COLORS.line} strokeWidth="2" opacity="0.45" />
         </pattern>
+        <clipPath id={`c${markerId}`}>
+          <rect
+            x={FIELD_LIMITS.minX * U}
+            y={FIELD_LIMITS.minY * U}
+            width={(FIELD_LIMITS.maxX - FIELD_LIMITS.minX) * U}
+            height={(FIELD_LIMITS.maxY - FIELD_LIMITS.minY) * U}
+          />
+        </clipPath>
       </defs>
 
       <rect x={VIEWBOX.x} y={VIEWBOX.y} width={VIEWBOX.w} height={VIEWBOX.h} rx={28} fill={COURT_COLORS.freeZone} />
@@ -250,6 +307,43 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
         );
       })}
 
+      {/* Range del giocatore selezionato: non finisce nell'immagine esportata */}
+      {range?.kind === 'area' && (
+        <rect
+          data-export="skip"
+          x={range.minX * U}
+          y={range.minY * U}
+          width={(range.maxX - range.minX) * U}
+          height={(range.maxY - range.minY) * U}
+          rx={18}
+          fill={COURT_COLORS.range}
+          fillOpacity={0.26}
+          stroke={COURT_COLORS.range}
+          strokeWidth={5}
+          strokeDasharray="16 12"
+        />
+      )}
+      {range?.kind === 'cerchio' && (
+        <g data-export="skip" clipPath={`url(#c${markerId})`}>
+          <circle
+            cx={range.center.x * U}
+            cy={range.center.y * U}
+            r={range.radius * U}
+            fill={COURT_COLORS.range}
+            fillOpacity={0.24}
+            stroke={COURT_COLORS.range}
+            strokeWidth={5}
+            strokeDasharray="16 12"
+          />
+          <path
+            d={`M${range.center.x * U - 16} ${range.center.y * U} h32 M${range.center.x * U} ${range.center.y * U - 16} v32`}
+            stroke={COURT_COLORS.range}
+            strokeWidth={5}
+            strokeLinecap="round"
+          />
+        </g>
+      )}
+
       {checks &&
         settings.showFaults &&
         checks.map((check) => {
@@ -295,10 +389,11 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
             x1={attack.x * U}
             y1={attack.y * U + 34}
             x2={(attack.x + (4.5 - attack.x) * 0.2) * U}
-            y2={attack.y * U + 185}
+            y2={attack.y * U + (ctx.attackFrom === 'freeball' ? 300 : 185)}
             stroke={COURT_COLORS.ball}
             strokeWidth={7}
             strokeLinecap="round"
+            strokeDasharray={ctx.attackFrom === 'freeball' ? '4 18' : undefined}
             markerEnd={`url(#b${markerId})`}
           />
           <Ball x={attack.x * U} y={attack.y * U} />
@@ -316,19 +411,42 @@ export function Court({ team, scene, settings, caption, editable = false, onMove
         return (
           <g
             key={id}
-            className={`player${dragging === id ? ' is-dragging' : ''}`}
+            className={`player${dragging === id ? ' is-dragging' : ''}${selected === id ? ' is-selected' : ''}`}
             style={{ transform: `translate(${point.x * U}px, ${point.y * U}px)` }}
             data-x={point.x * U}
             data-y={point.y * U}
-            tabIndex={editable ? 0 : undefined}
-            aria-label={editable ? `Sposta ${displayName(team, id)} con le frecce` : undefined}
+            data-player={id}
+            role={selection ? 'button' : undefined}
+            tabIndex={selection ? 0 : undefined}
+            aria-pressed={selection ? selected === id : undefined}
+            aria-label={
+              selection
+                ? selected === id
+                  ? `${displayName(team, id)}, selezionato: spostalo con le frecce`
+                  : `Seleziona ${displayName(team, id)}`
+                : undefined
+            }
+            onClick={(event) => {
+              if (!selection) return;
+              event.stopPropagation();
+              if (selected !== id) selection.onSelect(id);
+            }}
             onPointerDown={startDrag(id)}
             onPointerMove={moveDrag}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
-            onKeyDown={nudge(id)}
+            onKeyDown={onKey(id)}
           >
-            {editable && <circle className="player__handle" r={BADGE_R + 14} fill="none" stroke={COURT_COLORS.line} strokeWidth={3} strokeDasharray="7 9" data-export="skip" />}
+            {selection && (
+              <circle
+                className="player__ring"
+                r={BADGE_R + 13}
+                fill="none"
+                stroke={selected === id ? COURT_COLORS.range : COURT_COLORS.line}
+                strokeWidth={selected === id ? 7 : 4}
+                data-export="skip"
+              />
+            )}
             {id === 'L' ? (
               <rect x={-46} y={-46} width={92} height={92} rx={22} fill={style.fill} stroke={style.ring} strokeWidth={6} />
             ) : (

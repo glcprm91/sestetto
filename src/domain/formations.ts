@@ -177,7 +177,7 @@ const DEFENSE_DA4: Record<DefenseSystem, DefenseTable> = {
   avanzato: { DA: p(8.2, 0.6), CA: p(7.0, 0.6), SA: p(2.6, 3.4), CD: p(6.9, 3.0), DD: p(7.9, 7.2), SD: p(1.6, 7.2) },
 };
 
-const DEFENSE: Record<DefenseSystem, Record<AttackFrom, DefenseTable>> = {
+const DEFENSE: Record<DefenseSystem, Record<Exclude<AttackFrom, 'freeball'>, DefenseTable>> = {
   arretrato: {
     attesa: { SA: p(1.6, 0.9), CA: p(4.5, 0.9), DA: p(7.4, 0.9), SD: p(1.5, 5.6), CD: p(4.5, 7.6), DD: p(7.5, 5.6) },
     da4: DEFENSE_DA4.arretrato,
@@ -192,19 +192,51 @@ const DEFENSE: Record<DefenseSystem, Record<AttackFrom, DefenseTable>> = {
   },
 };
 
-function defensePositions(rotation: Rotation, attackFrom: AttackFrom, system: DefenseSystem): Record<RoleId, Point> {
-  const table = DEFENSE[system][attackFrom];
+/**
+ * Free ball: gli avversari non riescono ad attaccare e mandano una palla
+ * facile. Chi era a muro si stacca dalla rete per prendere la rincorsa, il
+ * palleggiatore va in zona di alzata e dietro si riceve.
+ */
+const FREE_BALL: Record<'palleggiatoreAvanti' | 'palleggiatoreDietro', DefenseTable> = {
+  // Palleggiatore già a rete (posto 2): l'opposto riceve con libero e schiacciatore.
+  palleggiatoreAvanti: { DA: p(6.2, 0.7), SA: p(1.1, 3.4), CA: p(4.2, 2.7), SD: p(2.3, 6.2), CD: p(4.9, 6.7), DD: p(7.5, 5.6) },
+  // Palleggiatore che sale da posto 1: l'opposto si stacca per attaccare da posto 2.
+  palleggiatoreDietro: { DD: p(6.2, 0.7), DA: p(8.0, 3.3), SA: p(1.1, 3.4), CA: p(4.2, 2.7), SD: p(3.0, 6.2), CD: p(6.1, 6.4) },
+};
+
+/**
+ * Contrattacco: dopo il muro o la difesa si riparte per attaccare. I ruoli
+ * sono già cambiati, quindi lo schiacciatore attacca sempre da posto 4.
+ */
+const COUNTER_ATTACK: Record<'palleggiatoreAvanti' | 'palleggiatoreDietro', DefenseTable> = {
+  palleggiatoreAvanti: { DA: ATTACK.alzata, SA: ATTACK.posto4, CA: ATTACK.centro, DD: ATTACK.secondaLinea, CD: ATTACK.pipe, SD: ATTACK.copertura },
+  palleggiatoreDietro: { DD: ATTACK.alzata, SA: ATTACK.posto4, CA: ATTACK.centro, DA: ATTACK.posto2, CD: ATTACK.pipe, SD: ATTACK.copertura },
+};
+
+const setterRow = (rotation: Rotation) => (isFrontRow(zoneOf('P', rotation)) ? 'palleggiatoreAvanti' : 'palleggiatoreDietro');
+
+function bySlot(rotation: Rotation, table: DefenseTable): Record<RoleId, Point> {
   const roles = defenseRoles(rotation);
   const result = {} as Record<RoleId, Point>;
   for (const slot of Object.keys(roles) as DefenseSlot[]) result[roles[slot]] = table[slot];
   return result;
 }
 
-/** Dove parte l'attacco avversario, appena oltre la rete. */
+function defensePositions(rotation: Rotation, attackFrom: AttackFrom, system: DefenseSystem): Record<RoleId, Point> {
+  const table = attackFrom === 'freeball' ? FREE_BALL[setterRow(rotation)] : DEFENSE[system][attackFrom];
+  return bySlot(rotation, table);
+}
+
+function counterAttackPositions(rotation: Rotation): Record<RoleId, Point> {
+  return bySlot(rotation, COUNTER_ATTACK[setterRow(rotation)]);
+}
+
+/** Da dove arriva la palla avversaria, appena oltre la rete. */
 export const ATTACK_ORIGIN: Record<Exclude<AttackFrom, 'attesa'>, Point> = {
   da4: p(8.2, -0.2),
   da3: p(4.5, -0.2),
   da2: p(0.8, -0.2),
+  freeball: p(4.5, -0.2),
 };
 
 /* -------------------------------------------------------------------------- */
@@ -223,12 +255,15 @@ function rolePositions(ctx: SceneContext, system: DefenseSystem): Record<RoleId,
       return servePositions(ctx.rotation);
     case 'difesa':
       return defensePositions(ctx.rotation, ctx.attackFrom, system);
+    case 'contrattacco':
+      return counterAttackPositions(ctx.rotation);
   }
 }
 
 /** Chiave sotto cui si salvano le posizioni spostate a mano per una scena. */
 export function sceneKey(ctx: SceneContext, system: DefenseSystem): string {
-  const variant = ctx.phase === 'difesa' ? `${ctx.attackFrom}-${system}` : '-';
+  // La free ball non dipende dal sistema di difesa; il contrattacco nemmeno da cosa hanno fatto gli avversari.
+  const variant = ctx.phase !== 'difesa' ? '-' : ctx.attackFrom === 'freeball' ? 'freeball' : `${ctx.attackFrom}-${system}`;
   return [ctx.situation, ctx.phase, variant, ctx.rotation].join('/');
 }
 

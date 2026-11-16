@@ -144,7 +144,27 @@ textarea {
   .board {
     grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
     align-items: start;
-    gap: 36px;
+    gap: 0 36px;
+  }
+
+  .stage {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .selection-slot {
+    grid-column: 2;
+    grid-row: 1;
+    margin-bottom: 18px;
+  }
+
+  .selection-slot .stage-note {
+    text-align: left;
+  }
+
+  .panel {
+    grid-column: 2;
+    grid-row: 2;
   }
 
   .stage {
@@ -156,7 +176,7 @@ textarea {
     margin: 0;
   }
 
-  /* Con le sei rotazioni o la barra di modifica il campo è più alto dello schermo: scorre con la pagina. */
+  /* Con le sei rotazioni il campo è più alto dello schermo: scorre con la pagina. */
   .stage--tall {
     position: static;
   }
@@ -185,12 +205,17 @@ textarea {
   transition: none;
 }
 
-.court.is-editable .player {
+.court.is-interactive .player {
+  cursor: pointer;
+}
+
+/* Solo il giocatore selezionato si trascina: sugli altri il dito continua a far scorrere la pagina. */
+.court.is-interactive .player.is-selected {
   cursor: grab;
   touch-action: none;
 }
 
-.court.is-editable .player.is-dragging {
+.court.is-interactive .player.is-dragging {
   cursor: grabbing;
 }
 
@@ -198,10 +223,13 @@ textarea {
   outline: none;
 }
 
-.court .player:focus-visible .player__handle {
-  stroke: var(--accent);
-  stroke-width: 6;
-  stroke-dasharray: none;
+.player__ring {
+  opacity: 0;
+}
+
+.player.is-selected .player__ring,
+.player:focus-visible .player__ring {
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -230,14 +258,47 @@ textarea {
   font-weight: 600;
 }
 
+.selection-slot:empty {
+  display: none;
+}
+
+.stage-note {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
 .edit-bar {
   display: grid;
   gap: 10px;
-  margin-top: 10px;
   padding: 12px;
-  border: 1px dashed var(--muted);
+  border: 1px dashed var(--accent);
   border-radius: var(--radius);
   font-size: 0.94rem;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper .field__label {
+  flex: 1;
+}
+
+.stepper .btn--icon {
+  width: 42px;
+  min-height: 42px;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.stepper output {
+  min-width: 4.2ch;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .overview {
@@ -381,6 +442,17 @@ textarea.input {
   color: var(--text);
 }
 
+.segmented--fit {
+  display: flex;
+}
+
+.segmented--fit .segmented__item {
+  flex: 1 1 auto;
+  padding-inline: 5px;
+  font-stretch: 76%;
+  white-space: nowrap;
+}
+
 .segmented__item[aria-pressed='true'] {
   background: var(--paper);
   color: var(--paper-ink);
@@ -456,13 +528,17 @@ textarea.input {
 
 .phases {
   position: relative;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  gap: 10px;
+  display: flex;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Larghezza secondo il testo: i nomi dei momenti sono molto diversi tra loro. */
+.phases > li {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Il filo che lega i momenti: sono una sequenza. */
@@ -480,12 +556,13 @@ textarea.input {
   position: relative;
   width: 100%;
   min-height: 46px;
-  padding: 6px 4px;
+  padding: 6px 7px;
+  white-space: nowrap;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
   font-weight: 700;
-  font-stretch: 82%;
+  font-stretch: 72%;
   cursor: pointer;
 }
 
@@ -684,12 +761,24 @@ textarea.input {
   }
 
   .phases {
-    gap: 6px;
+    gap: 4px;
   }
 
-  .phases__step,
+  .phases__step {
+    padding-inline: 4px;
+    font-size: 0.9rem;
+    font-stretch: 64%;
+  }
+
   .segmented__item {
-    font-stretch: 72%;
+    padding-inline: 4px;
+    font-stretch: 68%;
+  }
+
+  .segmented--fit .segmented__item {
+    padding-inline: 3px;
+    font-size: 0.9rem;
+    font-stretch: 64%;
   }
 
   .rotation__grid {
@@ -713,7 +802,7 @@ textarea.input {
   .foot,
   .toast,
   .team-picker,
-  .edit-bar {
+  .selection-slot {
     display: none !important;
   }
 

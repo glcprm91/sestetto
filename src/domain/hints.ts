@@ -61,10 +61,21 @@ export function sceneHint(team: Team, ctx: SceneContext): string {
     case 'battuta':
       return `Batte ${z(1)}. Gli altri restano in ordine di rotazione finché la palla non viene colpita, poi ognuno va al proprio posto di difesa.`;
 
+    case 'contrattacco': {
+      const d = defenseRoles(ctx.rotation);
+      return d.DA === 'P'
+        ? `${n('P')} alza da prima linea: ${n(d.SA)} attacca da posto 4 e ${n(d.CA)} al centro, ${n(d.DD)} da seconda linea da posto 1 e ${n(d.CD)} in pipe. ${n(d.SD)} copre l'attacco.`
+        : `${n('P')} sale da dietro ad alzare: ${n(d.SA)} attacca da posto 4, ${n(d.CA)} al centro e ${n(d.DA)} da posto 2, con ${n(d.CD)} in pipe. ${n(d.SD)} copre l'attacco.`;
+    }
+
     case 'difesa': {
       const d = defenseRoles(ctx.rotation);
       const arretrato = team.defenseSystem === 'arretrato';
       switch (ctx.attackFrom) {
+        case 'freeball':
+          return d.DA === 'P'
+            ? `Palla facile dagli avversari: ${n('P')} resta a rete in zona di alzata, ${n(d.SA)} e ${n(d.CA)} si staccano per prendere la rincorsa. Ricevono ${list([n(d.SD), n(d.CD), n(d.DD)])}.`
+            : `Palla facile dagli avversari: ${n('P')} sale da posto 1 in zona di alzata, ${list([n(d.SA), n(d.CA), n(d.DA)])} si staccano dalla rete per prendere la rincorsa. Ricevono ${list([n(d.SD), n(d.CD)])}.`;
         case 'attesa':
           return `Dopo il cambio ognuno gioca nel suo posto: ${n(d.SA)} in 4, ${n(d.CA)} in 3 e ${n(d.DA)} in 2; dietro ${n(d.SD)} in 5, ${n(d.CD)} in 6 e ${n(d.DD)} in 1.`;
         case 'da4':

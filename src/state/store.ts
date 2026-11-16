@@ -1,3 +1,4 @@
+import { clampRadius, RADIUS_LIMITS } from '../domain/range';
 import { clampPoint, createTeam, sanitizeTeam } from '../domain/team';
 import type { PlayerId, PlayerInfo, Point, Team } from '../domain/types';
 
@@ -8,6 +9,10 @@ export interface Settings {
   badge: 'ruolo' | 'numero';
   showArrows: boolean;
   showFaults: boolean;
+  /** Il giocatore selezionato si sposta solo dentro il suo range. */
+  limitMoves: boolean;
+  /** Raggio di spostamento a palla in gioco, in metri. */
+  moveRadius: number;
 }
 
 export interface AppState {
@@ -25,13 +30,21 @@ export type Action =
   | { type: 'player/patch'; id: PlayerId; patch: Partial<PlayerInfo> }
   | { type: 'custom/move'; key: string; id: PlayerId; point: Point }
   | { type: 'custom/reset'; key: string }
+  | { type: 'custom/resetPlayer'; key: string; id: PlayerId }
   | { type: 'custom/resetAll' }
   | { type: 'note/set'; key: string; text: string }
   | { type: 'settings/patch'; patch: Partial<Settings> };
 
 const STORAGE_KEY = 'sestetto:v1';
 
-const DEFAULT_SETTINGS: Settings = { colorMode: 'ruolo', badge: 'ruolo', showArrows: false, showFaults: false };
+const DEFAULT_SETTINGS: Settings = {
+  colorMode: 'ruolo',
+  badge: 'ruolo',
+  showArrows: false,
+  showFaults: false,
+  limitMoves: true,
+  moveRadius: RADIUS_LIMITS.initial,
+};
 
 export function initialState(): AppState {
   const team = createTeam();
@@ -58,6 +71,8 @@ export function loadState(): AppState {
         badge: saved.badge === 'numero' ? 'numero' : 'ruolo',
         showArrows: saved.showArrows === true,
         showFaults: saved.showFaults === true,
+        limitMoves: saved.limitMoves !== false,
+        moveRadius: clampRadius(typeof saved.moveRadius === 'number' ? saved.moveRadius : RADIUS_LIMITS.initial),
       },
     };
   } catch {
@@ -122,6 +137,13 @@ export function reducer(state: AppState, action: Action): AppState {
         return { ...team, custom };
       });
 
+    case 'custom/resetPlayer':
+      return updateActive(state, (team) => {
+        const { [action.id]: _removed, ...rest } = team.custom[action.key] ?? {};
+        const { [action.key]: _scene, ...others } = team.custom;
+        return { ...team, custom: Object.keys(rest).length > 0 ? { ...others, [action.key]: rest } : others };
+      });
+
     case 'custom/resetAll':
       return updateActive(state, (team) => ({ ...team, custom: {} }));
 
@@ -133,7 +155,9 @@ export function reducer(state: AppState, action: Action): AppState {
         return { ...team, notes };
       });
 
-    case 'settings/patch':
-      return { ...state, settings: { ...state.settings, ...action.patch } };
+    case 'settings/patch': {
+      const settings = { ...state.settings, ...action.patch };
+      return { ...state, settings: { ...settings, moveRadius: clampRadius(settings.moveRadius) } };
+    }
   }
 }

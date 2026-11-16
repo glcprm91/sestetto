@@ -14,7 +14,10 @@ export function sceneCaption(ctx: SceneContext): string {
       return `${rotation}, attacco dopo la ricezione`;
     case 'battuta':
       return `${rotation}, battuta`;
+    case 'contrattacco':
+      return `${rotation}, contrattacco`;
     case 'difesa':
+      if (ctx.attackFrom === 'freeball') return `${rotation}, free ball`;
       return ctx.attackFrom === 'attesa'
         ? `${rotation}, difesa ${ctx.situation === 'battuta' ? 'dopo la battuta' : 'dopo l’attacco'}`
         : `${rotation}, difesa su attacco ${ATTACK_TEXT[ctx.attackFrom]}`;

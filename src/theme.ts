@@ -13,6 +13,8 @@ export const COURT_COLORS = {
   ok: '#6BE39A',
   fault: '#FF5D5D',
   ball: '#F5C518',
+  /** Selezione e range del giocatore. */
+  range: '#F5C518',
   ballLine: '#143A6B',
 } as const;
 

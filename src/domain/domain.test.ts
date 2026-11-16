@@ -9,7 +9,7 @@ import { decodeTeam, encodeTeam } from '../state/share';
 
 const ROTATIONS: Rotation[] = [1, 2, 3, 4, 5, 6];
 const SITUATIONS: Situation[] = ['ricezione', 'battuta'];
-const ATTACKS: AttackFrom[] = ['attesa', 'da4', 'da3', 'da2'];
+const ATTACKS: AttackFrom[] = ['attesa', 'da4', 'da3', 'da2', 'freeball'];
 const SYSTEMS: DefenseSystem[] = ['arretrato', 'avanzato'];
 
 function allContexts(): SceneContext[] {
@@ -100,7 +100,7 @@ describe('formazioni', () => {
       team.useLibero = useLibero;
       for (const ctx of allContexts()) {
         const scene = buildScene(team, ctx);
-        if (ctx.phase === 'attacco' || ctx.phase === 'difesa') {
+        if (ctx.phase === 'attacco' || ctx.phase === 'difesa' || ctx.phase === 'contrattacco') {
           expect(scene.checks).toBeNull();
           continue;
         }
