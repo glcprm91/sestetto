@@ -1,0 +1,751 @@
+:root {
+  --bg: #0f1b31;
+  --panel: #17263f;
+  --panel-2: #1d3050;
+  --line: #2a3c5e;
+  --text: #e9eef6;
+  --muted: #9fb0cc;
+  --accent: #f5c518;
+  --accent-ink: #1b1400;
+  --paper: #e9eef6;
+  --paper-ink: #0f1b31;
+  --danger: #ff8d8d;
+  --ok: #6be39a;
+  --radius: 10px;
+  --font: 'Archivo Variable', 'Arial Narrow', Arial, sans-serif;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.45 var(--font);
+  font-stretch: 100%;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-stretch: 68%;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Impaginazione ---------------------------------------------------------- */
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 14px 48px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.board {
+  display: grid;
+  gap: 18px;
+}
+
+.court-wrap {
+  /* Su telefono il campo non supera poco più di metà schermo: sotto devono vedersi i comandi. */
+  max-width: calc(56svh * 0.874);
+  margin: 0 auto;
+}
+
+.stage {
+  scroll-margin-top: 10px;
+}
+
+.panel {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.section {
+  display: grid;
+  gap: 14px;
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+}
+
+.section--first {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.row > .btn {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 980px) {
+  .app {
+    padding: 22px 28px 56px;
+  }
+
+  .board {
+    grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
+    align-items: start;
+    gap: 36px;
+  }
+
+  .stage {
+    position: sticky;
+    top: 16px;
+  }
+
+  .court-wrap {
+    margin: 0;
+  }
+
+  /* Con le sei rotazioni o la barra di modifica il campo è più alto dello schermo: scorre con la pagina. */
+  .stage--tall {
+    position: static;
+  }
+
+  /* Il campo intero deve stare nello schermo senza scorrere. */
+  .court-wrap {
+    max-width: max(320px, calc((100vh - 130px) * 0.874));
+  }
+}
+
+/* Campo ------------------------------------------------------------------ */
+
+.court {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.player {
+  transition: transform 650ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+
+.player.is-dragging {
+  transition: none;
+}
+
+.court.is-editable .player {
+  cursor: grab;
+  touch-action: none;
+}
+
+.court.is-editable .player.is-dragging {
+  cursor: grabbing;
+}
+
+.court .player:focus {
+  outline: none;
+}
+
+.court .player:focus-visible .player__handle {
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-dasharray: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player {
+    transition: none;
+  }
+}
+
+.status {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.status__ok {
+  color: var(--ok);
+}
+
+.faults {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.edit-bar {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px dashed var(--muted);
+  border-radius: var(--radius);
+  font-size: 0.94rem;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.overview__item {
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+}
+
+/* Comandi ---------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.btn--primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #ffd53d;
+}
+
+.btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn--quiet {
+  justify-self: start;
+  min-height: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: none;
+  color: var(--text);
+}
+
+.btn--icon {
+  flex: none;
+  width: 46px;
+  padding: 0;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field__label {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #0b1528;
+}
+
+.input::placeholder {
+  color: #6f83a6;
+}
+
+textarea.input {
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 2px);
+  background: #0b1528;
+}
+
+.segmented__item {
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-stretch: 88%;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.segmented__item:hover {
+  color: var(--text);
+}
+
+.segmented__item[aria-pressed='true'] {
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch__track {
+  flex: none;
+  position: relative;
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 150ms;
+}
+
+.switch__track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 150ms;
+}
+
+.switch input:checked + .switch__track {
+  background: var(--accent);
+}
+
+.switch input:checked + .switch__track::after {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible + .switch__track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Momenti dell'azione ---------------------------------------------------- */
+
+.action-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.action-row > .field {
+  flex: 1;
+}
+
+.action-row > .btn--icon {
+  min-height: 50px;
+}
+
+.phases {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Il filo che lega i momenti: sono una sequenza. */
+.phases::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--line);
+}
+
+.phases__step {
+  position: relative;
+  width: 100%;
+  min-height: 46px;
+  padding: 6px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-weight: 700;
+  font-stretch: 82%;
+  cursor: pointer;
+}
+
+.phases__step:hover {
+  background: var(--panel-2);
+}
+
+.phases__step[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.defense {
+  display: grid;
+  gap: 12px;
+}
+
+.hint {
+  max-width: 62ch;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+
+/* Rotazione -------------------------------------------------------------- */
+
+.rotation {
+  display: grid;
+  gap: 10px;
+}
+
+.rotation__grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rotation__item {
+  min-height: 46px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-stretch: 70%;
+  cursor: pointer;
+}
+
+.rotation__item:hover {
+  background: var(--panel-2);
+}
+
+.rotation__item[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.rotation__actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+
+.rotation__actions .btn--primary {
+  min-height: 52px;
+  font-size: 1.05rem;
+}
+
+/* Squadra ---------------------------------------------------------------- */
+
+.team-picker select {
+  max-width: 46vw;
+  min-height: 42px;
+  padding: 8px 34px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 16'%3E%3Cpath d='M2.5 6 6 2.5 9.5 6M2.5 10 6 13.5 9.5 10' fill='none' stroke='%23e9eef6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 12px center / 10px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  appearance: none;
+  cursor: pointer;
+}
+
+.roster {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster__row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 62px;
+  align-items: center;
+  gap: 10px;
+}
+
+.roster__row:has(.gender) {
+  grid-template-columns: 40px minmax(0, 1fr) 56px auto;
+  gap: 8px;
+}
+
+.input--number {
+  padding-inline: 6px;
+  text-align: center;
+}
+
+.role-badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 2px;
+  border-radius: 50%;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-stretch: 68%;
+}
+
+.role-badge--libero {
+  border-radius: 9px;
+}
+
+.gender {
+  display: grid;
+  grid-auto-flow: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.gender button {
+  width: 36px;
+  min-height: 42px;
+  border: 0;
+  background: #0b1528;
+  color: var(--muted);
+  font-weight: 800;
+  font-stretch: 70%;
+  cursor: pointer;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Piede e avvisi --------------------------------------------------------- */
+
+.foot {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.foot p {
+  max-width: 70ch;
+}
+
+.foot a {
+  color: var(--text);
+}
+
+.toast {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: flex;
+  justify-content: center;
+  padding: 0 14px;
+  pointer-events: none;
+}
+
+.toast span {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-weight: 600;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+}
+
+/* Telefoni stretti --------------------------------------------------------- */
+
+@media (max-width: 360px) {
+  .app {
+    padding-inline: 10px;
+  }
+
+  .phases {
+    gap: 6px;
+  }
+
+  .phases__step,
+  .segmented__item {
+    font-stretch: 72%;
+  }
+
+  .rotation__grid {
+    gap: 4px;
+  }
+}
+
+/* Stampa: solo il campo, su carta bianca --------------------------------- */
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background: #fff;
+    color: #111;
+  }
+
+  .panel,
+  .foot,
+  .toast,
+  .team-picker,
+  .edit-bar {
+    display: none !important;
+  }
+
+  .app {
+    max-width: none;
+    padding: 0;
+  }
+
+  .board {
+    display: block;
+  }
+
+  .stage {
+    position: static;
+  }
+
+  .court-wrap {
+    max-width: 150mm;
+  }
+
+  .overview {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+
+  .status {
+    color: #333;
+  }
+
+  .court,
+  .court * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
