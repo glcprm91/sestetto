@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy e cookie | __SITE_NAME__</title>
+    <meta name="description" content="Quali dati tratta __SITE_NAME__, dove restano e quali statistiche raccoglie." />
+    <link rel="canonical" href="__SITE_URL__/privacy" />
+    <meta name="theme-color" content="__THEME_COLOR__" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/src/page.css" />
+  </head>
+  <body>
+    <main class="page">
+      <a class="page__home" href="/">
+        <img src="/favicon.svg" width="40" height="40" alt="" />
+        <span>__SITE_NAME__</span>
+      </a>
+
+      <h1>Privacy e cookie</h1>
+      <p class="page__date">Aggiornata il 16 novembre 2026</p>
+
+      <h2>In breve</h2>
+      <p>
+        __SITE_NAME__ si usa senza registrarsi. Squadre, nomi e posizioni che inserisci restano nel tuo browser e non
+        vengono inviati a nessun server. Contiamo le visite in forma anonima, senza cookie<!--se:google-analytics-->, e
+        usiamo Google Analytics solo se lo accetti<!--/se:google-analytics-->. Il sito non mostra pubblicità.
+      </p>
+
+      <!--se:titolare-->
+      <h2>Chi tratta i dati</h2>
+      <p>Titolare del trattamento: __OWNER__. Per qualsiasi richiesta: __CONTACT__.</p>
+      <!--/se:titolare-->
+
+      <h2>Dati salvati nel tuo browser</h2>
+      <p>
+        Per ricordare squadre, nomi, posizioni, appunti e impostazioni, il sito usa la memoria locale del browser
+        (<code>localStorage</code>). È uno strumento tecnico necessario al funzionamento: i dati restano sul tuo
+        dispositivo e puoi cancellarli in ogni momento dalle impostazioni del browser.
+      </p>
+      <p>
+        Il pulsante «Copia link della squadra» inserisce i dati della squadra nel link. Quella parte dell'indirizzo non
+        viene inviata al server: la condividi tu, con chi scegli.
+      </p>
+
+      <h2>Hosting</h2>
+      <p>
+        Il sito è ospitato da Vercel Inc. (Stati Uniti), che per consegnare le pagine tratta dati tecnici come
+        l'indirizzo IP nei registri del server, secondo la propria
+        <a href="https://vercel.com/legal/privacy-policy">informativa</a>.
+      </p>
+
+      <h2>Statistiche anonime</h2>
+      <p>
+        Contiamo le visite con Vercel Web Analytics, che non usa cookie e non salva dati personali: ogni visitatore è
+        riconosciuto solo tramite un codice ricavato dalla richiesta, che si azzera ogni giorno. Vediamo quali pagine sono
+        aperte, da dove arrivano le visite, il paese e il tipo di dispositivo e di browser. Non serve il consenso perché
+        questi dati non permettono di risalire a te.
+      </p>
+
+      <!--se:google-analytics-->
+      <h2>Google Analytics, solo con il tuo consenso</h2>
+      <p>
+        Se lo accetti dal banner, usiamo Google Analytics 4 di Google Ireland Limited per statistiche più dettagliate:
+        pagine viste, durata delle visite, dispositivo e area geografica approssimativa. Google Analytics salva nel browser
+        i cookie <code>_ga</code> e <code>_ga_*</code>, che durano fino a due anni. Abbiamo disattivato Google Signals e la
+        personalizzazione degli annunci. I dati possono essere trasferiti negli Stati Uniti, dove Google aderisce al Data
+        Privacy Framework UE-USA. Dettagli nell'<a href="https://policies.google.com/privacy?hl=it">informativa di Google</a>.
+      </p>
+      <p>
+        Se rifiuti, o chiudi il banner, Google Analytics non viene caricato. Puoi cambiare scelta quando vuoi da
+        «Preferenze cookie» in fondo alla pagina principale. La base giuridica è il tuo consenso (art. 6.1.a del GDPR).
+      </p>
+      <!--/se:google-analytics-->
+
+      <h2>I tuoi diritti</h2>
+      <p>
+        Puoi chiedere l'accesso ai tuoi dati, la loro rettifica o cancellazione, la limitazione del trattamento e
+        opporti<!--se:titolare--> scrivendo a __CONTACT__<!--/se:titolare-->. Puoi anche presentare reclamo al
+        <a href="https://www.garanteprivacy.it/">Garante per la protezione dei dati personali</a>. Con le statistiche
+        anonime non siamo in grado di collegare i dati alla tua persona.
+      </p>
+
+      <p class="page__back"><a href="/">Torna alle rotazioni</a></p>
+    </main>
+  </body>
+</html>

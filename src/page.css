@@ -1,0 +1,73 @@
+@import '@fontsource-variable/archivo/wdth.css';
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #0f1b31;
+  color: #e9eef6;
+  font: 400 17px/1.6 'Archivo Variable', Arial, sans-serif;
+}
+
+.page {
+  max-width: 66ch;
+  margin: 0 auto;
+  padding: 24px 18px 64px;
+}
+
+.page__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-stretch: 68%;
+  text-decoration: none;
+}
+
+h1,
+h2 {
+  font-stretch: 68%;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+h1 {
+  margin: 36px 0 4px;
+  font-size: 2.4rem;
+}
+
+h2 {
+  margin: 32px 0 8px;
+  font-size: 1.45rem;
+}
+
+p {
+  margin: 0 0 12px;
+}
+
+.page__date {
+  color: #9fb0cc;
+  font-size: 0.94rem;
+}
+
+a {
+  color: #f5c518;
+  text-underline-offset: 3px;
+}
+
+a:focus-visible {
+  outline: 2px solid #f5c518;
+  outline-offset: 2px;
+}
+
+code {
+  font-size: 0.92em;
+}
+
+.page__back {
+  margin-top: 36px;
+}

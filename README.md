@@ -18,6 +18,27 @@ Le sei rotazioni della pallavolo in ricezione, attacco, battuta e difesa, con i 
 
 Non c'è un server: squadre, nomi e posizioni restano nel browser di chi usa il sito (`localStorage`).
 
+## Logo
+
+Il simbolo mostra sei giocatori che ruotano in senso orario sotto la rete; il pallino giallo è il palleggiatore in posto 1. I file sono in `brand/` (simbolo, logo per sfondi chiari e scuri, in SVG e PNG); favicon, icone per telefono e immagine per i social sono in `public/`.
+
+## Motori di ricerca
+
+- Titolo, descrizione e testi per i social sono in `site.config.ts`.
+- La build scrive in `index.html` l'indirizzo canonico, i tag Open Graph e i dati strutturati, e genera `robots.txt` e `sitemap.xml`. L'indirizzo si ricava dal dominio di produzione di Vercel; per forzarne uno diverso imposta `VITE_SITE_URL`.
+- La pagina iniziale arriva già disegnata (vedi `scripts/prerender.mjs`): i motori di ricerca leggono campo, testi e guida senza eseguire JavaScript.
+- Per Google Search Console scegli la verifica con tag HTML e copia il valore di `content` in `VITE_GOOGLE_SITE_VERIFICATION`. Poi invia la sitemap: `/sitemap.xml`.
+
+## Statistiche
+
+- **Vercel Web Analytics** è sempre attivo e non usa cookie, quindi non serve il banner. Va acceso una volta dal pannello di Vercel: progetto → Analytics → Enable. Il piano gratuito include 50.000 eventi al mese.
+- **Google Analytics 4** è facoltativo. Si accende impostando `VITE_GA_ID` (l'ID di misurazione `G-…`) insieme a `VITE_SITE_OWNER` e `VITE_SITE_CONTACT`, che compaiono nell'informativa. In quel caso compare il banner per il consenso e Google Analytics parte solo per chi accetta.
+- Alle statistiche non arriva mai la parte del link dopo `#`, dove il link condiviso porta i nomi della squadra.
+
+Le variabili si impostano su Vercel in Settings → Environment Variables; l'elenco completo è in `.env.example`. Dopo averle cambiate serve un nuovo deploy.
+
+L'informativa è in `privacy.html`: è un testo di partenza, da far verificare prima di aggiungere altri servizi.
+
 ## Sviluppo
 
 Serve Node 20.19 o successivo.
@@ -47,6 +68,9 @@ Ogni push sul ramo principale ripubblica il sito.
 | Range entro cui si sposta un giocatore | `src/domain/range.ts` |
 | Testi di spiegazione sotto il campo | `src/domain/hints.ts` |
 | Colori del campo e dei ruoli | `src/theme.ts` |
+| Titolo, descrizione e indirizzo del sito | `site.config.ts` |
+| Guida testuale sotto il campo | `src/components/Guide.tsx` |
+| Banner dei cookie e Google Analytics | `src/components/CookieBanner.tsx`, `src/analytics/` |
 | Disegno del campo | `src/components/Court.tsx` |
 
 Le coordinate sono in metri sulla propria metà campo: `x` da 0 (linea laterale sinistra) a 9, `y` da 0 (rete) a 9 (linea di fondo). Dopo ogni modifica alle posizioni conviene lanciare `npm test`: verifica che base, ricezione e battuta non contengano falli di posizione.

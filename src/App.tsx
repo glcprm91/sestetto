@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { GA_ENABLED } from './analytics/config';
+import { readConsent, saveConsent } from './analytics/consent';
+import { startGoogleAnalytics, stopGoogleAnalytics } from './analytics/google';
 import { sceneCaption } from './captions';
 import { DefenseOptions, PhaseBar, PlayButton, RadiusStepper, RotationBar, Segmented, SituationSwitch, Switch } from './components/Controls';
+import { CookieBanner } from './components/CookieBanner';
 import { Court, type CourtSelection } from './components/Court';
+import { Guide } from './components/Guide';
+import { LogoMark } from './components/Logo';
 import { Roster } from './components/Roster';
 import { noteKey, sceneKey } from './domain/formations';
 import { sceneHint } from './domain/hints';
@@ -13,8 +19,7 @@ import { PHASES, type AttackFrom, type PhaseId, type PlayerId, type Point, type 
 import { downloadPng } from './export/png';
 import { shareUrl, teamFromHash } from './state/share';
 import { activeTeam, loadState, reducer, saveState } from './state/store';
-
-const SITE_NAME = 'Sestetto';
+import { SITE } from '../site.config';
 
 const FREE: MoveRange = { kind: 'libero' };
 
@@ -41,6 +46,8 @@ export default function App() {
   const [selected, setSelected] = useState<PlayerId | null>(null);
   const [playing, setPlaying] = useState(false);
   const [toast, setToast] = useState('');
+  /** Il banner dei cookie esiste solo con Google Analytics attivo, e si decide dopo il caricamento. */
+  const [askConsent, setAskConsent] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stageRef = useRef<HTMLElement | null>(null);
 
@@ -75,6 +82,20 @@ export default function App() {
     dispatch({ type: 'team/import', team: shared });
     setToast(`Squadra aggiunta: ${shared.name}`);
   }, []);
+
+  useEffect(() => {
+    if (!GA_ENABLED) return;
+    const consent = readConsent();
+    if (consent?.analytics) startGoogleAnalytics();
+    else if (!consent) setAskConsent(true);
+  }, []);
+
+  const chooseConsent = (analytics: boolean) => {
+    saveConsent(analytics);
+    if (analytics) startGoogleAnalytics();
+    else stopGoogleAnalytics();
+    setAskConsent(false);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -181,7 +202,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <h1>{SITE_NAME}</h1>
+        <p className="brand__name">
+          <LogoMark />
+          <span>{SITE.name}</span>
+        </p>
         <label className="team-picker">
           <span className="visually-hidden">Squadra</span>
           <select
@@ -198,6 +222,7 @@ export default function App() {
             ))}
           </select>
         </label>
+        <h1 className="brand__tagline">{SITE.tagline}</h1>
       </header>
 
       <main className="board">
@@ -375,6 +400,8 @@ export default function App() {
         </div>
       </main>
 
+      <Guide />
+
       <footer className="foot">
         <p>
           Schemi del sistema 5-1 con ricezione a tre. Squadre, nomi e posizioni restano salvati in questo browser. Ispirato a{' '}
@@ -383,7 +410,17 @@ export default function App() {
           </a>
           .
         </p>
+        <p className="foot__links">
+          <a href="/privacy">Privacy</a>
+          {GA_ENABLED && (
+            <button type="button" className="link-button" onClick={() => setAskConsent(true)}>
+              Preferenze cookie
+            </button>
+          )}
+        </p>
       </footer>
+
+      {askConsent && <CookieBanner onChoice={chooseConsent} />}
 
       <div className="toast" role="status" aria-live="polite">
         {toast && <span>{toast}</span>}

@@ -85,12 +85,40 @@ textarea {
   padding: 14px 14px 48px;
 }
 
+/* Marchio e squadra sulla stessa riga; sotto, a tutta larghezza, la riga che dice cos'è il sito (il titolo della pagina). */
 .top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 12px;
+}
+
+.brand__name {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  font-stretch: 68%;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.logo-mark {
+  flex: none;
+  display: block;
+}
+
+.brand__tagline {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+  font-stretch: 88%;
+  letter-spacing: 0;
+  line-height: 1.25;
 }
 
 .board {
@@ -733,6 +761,138 @@ textarea.input {
   color: var(--text);
 }
 
+.foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Guida -------------------------------------------------------------------- */
+
+.guide {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.guide > h2 {
+  max-width: 24ch;
+  font-size: 1.9rem;
+}
+
+.guide__grid {
+  display: grid;
+  gap: 26px 40px;
+  margin-top: 22px;
+}
+
+.guide h3 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-stretch: 72%;
+  line-height: 1.15;
+}
+
+.guide p {
+  max-width: 62ch;
+  color: #c7d3e6;
+  line-height: 1.55;
+}
+
+.guide p + p {
+  margin-top: 8px;
+}
+
+.guide__howto {
+  max-width: calc(62ch + 40px);
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.guide__howto p {
+  color: var(--text);
+}
+
+@media (min-width: 760px) {
+  .guide__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Consenso ai cookie ------------------------------------------------------- */
+
+.cookie {
+  position: fixed;
+  z-index: 10;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  gap: 10px;
+  max-width: 460px;
+  margin-left: auto;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 45%);
+}
+
+.cookie h2 {
+  padding-right: 36px;
+  font-size: 1.3rem;
+}
+
+.cookie p {
+  color: #c7d3e6;
+  font-size: 0.94rem;
+}
+
+.cookie a {
+  color: var(--text);
+}
+
+.cookie__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.cookie__close:hover {
+  color: var(--text);
+}
+
+.cookie__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .toast {
   position: fixed;
   left: 0;
@@ -800,6 +960,8 @@ textarea.input {
 
   .panel,
   .foot,
+  .guide,
+  .cookie,
   .toast,
   .team-picker,
   .selection-slot {
